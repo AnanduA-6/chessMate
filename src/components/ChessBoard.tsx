@@ -1,73 +1,91 @@
-import React from 'react';
+import { useState } from 'react';
+import { Chess } from 'chess.js';
+import { Chessboard } from 'react-chessboard';
 import { Square, File, Rank } from '../types/types';
 
 const ChessBoard = () => {
-  const files: File[] = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
-  const ranks: Rank[] = ['8', '7', '6', '5', '4', '3', '2', '1'];
+  const [game, setGame] = useState(new Chess());
+  const [selectedSquare, setSelectedSquare] = useState<Square | null>(null);
+  const [possibleMoves, setPossibleMoves] = useState<Square[]>([]);
 
-  // Unicode chess pieces
-  const pieces = {
-    whitePawn: '♙',
-    whiteRook: '♖',
-    whiteKnight: '♘',
-    whiteBishop: '♗',
-    whiteQueen: '♕',
-    whiteKing: '♔',
-    blackPawn: '♟',
-    blackRook: '♜',
-    blackKnight: '♞',
-    blackBishop: '♝',
-    blackQueen: '♛',
-    blackKing: '♚',
+  const getLegalMoves = (square: Square): Square[] => {
+    const moves = game.moves({ square, verbose: true });
+    return moves.map(move => move.to as Square);
   };
 
-  const initialBoard = {
-    a8: pieces.blackRook, b8: pieces.blackKnight, c8: pieces.blackBishop, d8: pieces.blackQueen,
-    e8: pieces.blackKing, f8: pieces.blackBishop, g8: pieces.blackKnight, h8: pieces.blackRook,
-    a7: pieces.blackPawn, b7: pieces.blackPawn, c7: pieces.blackPawn, d7: pieces.blackPawn,
-    e7: pieces.blackPawn, f7: pieces.blackPawn, g7: pieces.blackPawn, h7: pieces.blackPawn,
-    a2: pieces.whitePawn, b2: pieces.whitePawn, c2: pieces.whitePawn, d2: pieces.whitePawn,
-    e2: pieces.whitePawn, f2: pieces.whitePawn, g2: pieces.whitePawn, h2: pieces.whitePawn,
-    a1: pieces.whiteRook, b1: pieces.whiteKnight, c1: pieces.whiteBishop, d1: pieces.whiteQueen,
-    e1: pieces.whiteKing, f1: pieces.whiteBishop, g1: pieces.whiteKnight, h1: pieces.whiteRook,
+  const handleSquareClick = (square: Square) => {
+    const pieceOnSquare = game.get(square);
+    const currentColor = game.turn() === 'w' ? 'white' : 'black';
+    
+    if (!selectedSquare) {
+      if (pieceOnSquare && pieceOnSquare.color === (currentColor === 'white' ? 'w' : 'b')) {
+        setSelectedSquare(square);
+        setPossibleMoves(getLegalMoves(square));
+      }
+    } else {
+      if (square === selectedSquare) {
+        setSelectedSquare(null);
+        setPossibleMoves([]);
+      } else if (possibleMoves.includes(square)) {
+        try {
+          game.move({ from: selectedSquare, to: square });
+          setGame(new Chess(game.fen()));
+          setSelectedSquare(null);
+          setPossibleMoves([]);
+        } catch (error) {
+          console.error('Invalid move:', error);
+        }
+      } else if (pieceOnSquare && pieceOnSquare.color === (currentColor === 'white' ? 'w' : 'b')) {
+        setSelectedSquare(square);
+        setPossibleMoves(getLegalMoves(square));
+      } else {
+        setSelectedSquare(null);
+        setPossibleMoves([]);
+      }
+    }
   };
 
-  const getSquareColor = (file: File, rank: Rank): string => {
-    const fileIndex = files.indexOf(file);
-    const rankIndex = ranks.indexOf(rank);
-    return (fileIndex + rankIndex) % 2 === 0 ? 'bg-neutral-200' : 'bg-neutral-500';
-  };
+  // Custom square rendering for highlights
+  const customSquareStyles = () => {
+    const styles: { [square: string]: React.CSSProperties } = {};
 
-  const getPiece = (square: Square): string => {
-    return initialBoard[square as keyof typeof initialBoard] || '';
+    // Style for selected square
+    if (selectedSquare) {
+      styles[selectedSquare] = {
+        backgroundColor: 'rgba(255, 255, 0, 0.4)',
+      };
+    }
+
+    // Style for possible moves
+    possibleMoves.forEach((square) => {
+      styles[square] = {
+        backgroundColor: 'rgba(0, 255, 0, 0.2)',
+        borderRadius: '50%',
+        boxShadow: 'inset 0 0 0 2px rgba(0, 255, 0, 0.4)',
+      };
+    });
+
+    return styles;
   };
 
   return (
     <div className="flex flex-col items-center p-8">
-      <div className="w-[560px] h-[560px] border-2 border-neutral-700">
-        <div className="grid grid-cols-8 h-full">
-          {ranks.map((rank) => (
-            files.map((file) => {
-              const square: Square = `${file}${rank}` as Square;
-              return (
-                <div
-                  key={square}
-                  className={`
-                    ${getSquareColor(file, rank)}
-                    flex items-center justify-center
-                    text-4xl cursor-pointer
-                    hover:opacity-75 transition-opacity
-                  `}
-                >
-                  {getPiece(square)}
-                </div>
-              );
-            })
-          ))}
-        </div>
+      <div className="w-[560px]">
+        <Chessboard 
+          position={game.fen()}
+          boardWidth={560}
+          customSquareStyles={customSquareStyles()}
+          onSquareClick={handleSquareClick}
+          customBoardStyle={{
+            borderRadius: '4px',
+            boxShadow: '0 2px 10px rgba(0, 0, 0, 0.5)',
+          }}
+          boardOrientation="white"
+        />
       </div>
       <div className="mt-4 text-xl font-semibold">
-        White to move
+        {game.turn() === 'w' ? "White" : "Black"} to move
+        {game.isCheck() && " - Check!"}
       </div>
     </div>
   );
