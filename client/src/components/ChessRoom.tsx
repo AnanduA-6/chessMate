@@ -9,6 +9,7 @@ const ChessRoom: React.FC = () => {
   const [gameStarted, setGameStarted] = useState(false);
   const [error, setError] = useState<string>('');
   const [isCreatingRoom, setIsCreatingRoom] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     const socket = socketService.connect();
@@ -57,69 +58,140 @@ const ChessRoom: React.FC = () => {
     }
   };
 
+  const handleCopyRoomId = async () => {
+    await navigator.clipboard.writeText(roomId);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
   if (!joined) {
     return (
-      <div className="flex flex-col items-center gap-4 p-8">
-        {!isCreatingRoom ? (
-          <>
-            <button 
-              onClick={handleCreateRoom}
-              className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-            >
-              Create New Room
-            </button>
-            <div className="text-center my-4">OR</div>
-            <div className="flex flex-col gap-2">
-              <input
-                type="text"
-                value={roomId}
-                onChange={(e) => setRoomId(e.target.value)}
-                placeholder="Enter Room ID"
-                className="px-4 py-2 border rounded"
-              />
-              <button 
-                onClick={handleJoinRoom}
-                className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-800 flex items-center justify-center p-4 w-full">
+        <div className="max-w-md w-full bg-gray-800/50 backdrop-blur-sm rounded-xl shadow-2xl p-8 border border-gray-700">
+          <h1 className="text-4xl font-bold text-center mb-8 bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-400">
+            Chess Arena
+          </h1>
+          
+          {!isCreatingRoom ? (
+            <div className="space-y-6">
+              <button
+                onClick={handleCreateRoom}
+                className="w-full py-4 px-6 bg-blue-600 hover:bg-blue-500 text-white transition-all rounded-lg font-semibold text-lg shadow-lg shadow-blue-600/30 hover:shadow-blue-500/40 transform hover:-translate-y-0.5"
               >
-                Join Room
+                Create New Game
               </button>
+
+              <div className="relative flex items-center gap-2">
+                <span className="absolute inset-x-0 h-px bg-gradient-to-r from-transparent via-gray-500 to-transparent" />
+                <span className="bg-gray-800 px-4 text-gray-400 text-sm relative">OR</span>
+              </div>
+
+              <div className="space-y-3">
+                <input
+                  type="text"
+                  value={roomId}
+                  onChange={(e) => setRoomId(e.target.value)}
+                  placeholder="Enter Room Code"
+                  className="w-full bg-gray-700/50 border border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                />
+                <button
+                  onClick={handleJoinRoom}
+                  className="w-full py-4 px-6 bg-green-600 hover:bg-green-500 text-white transition-all rounded-lg font-semibold text-lg shadow-lg shadow-green-600/30 hover:shadow-green-500/40 transform hover:-translate-y-0.5"
+                >
+                  Join Game
+                </button>
+              </div>
             </div>
-          </>
-        ) : null}
-        {error && <div className="text-red-500">{error}</div>}
+          ) : null}
+
+          {error && (
+            <div className="mt-4 p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-center">
+              {error}
+            </div>
+          )}
+        </div>
       </div>
     );
   }
 
   if (!gameStarted) {
     return (
-      <div className="text-center p-8">
-        <div className="mb-4">
-          <h2 className="text-xl font-bold mb-2">Room ID:</h2>
-          <div className="flex items-center justify-center gap-2">
-            <span className="px-4 py-2 bg-gray-100 rounded">{roomId}</span>
-            <button
-              onClick={() => navigator.clipboard.writeText(roomId)}
-              className="px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600"
-            >
-              Copy
-            </button>
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-800 flex items-center justify-center p-4 w-full">
+        <div className="max-w-md w-full bg-gray-800/50 backdrop-blur-sm rounded-xl shadow-2xl p-8 border border-gray-700 text-center">
+          <h2 className="text-2xl font-bold text-white mb-6">Waiting for Opponent</h2>
+          
+          <div className="mb-8">
+            <div className="text-gray-400 mb-2">Room Code</div>
+            <div className="flex items-center justify-center gap-3">
+              <span className="px-6 py-3 bg-gray-700/50 rounded-lg font-mono text-xl text-white">
+                {roomId}
+              </span>
+              <button
+                onClick={handleCopyRoomId}
+                className={`p-2 rounded-lg transition-all ${
+                  copied 
+                    ? 'bg-green-500 text-white' 
+                    : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                }`}
+              >
+                {copied ? (
+                  <CheckIcon className="w-5 h-5" />
+                ) : (
+                  <CopyIcon className="w-5 h-5" />
+                )}
+              </button>
+            </div>
+          </div>
+
+          <div className="relative flex items-center justify-center">
+            <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
+            <span className="ml-3 text-gray-300">Waiting for opponent to join...</span>
           </div>
         </div>
-        <div className="text-lg">Waiting for opponent to join...</div>
       </div>
     );
   }
 
   return (
-    <div>
-      <div className="text-center mb-4">
-        <div className="text-gray-600">Room ID: {roomId}</div>
-        <div className="font-semibold">Playing as {playerColor}</div>
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-800 p-4 w-full">
+      <div className="max-w-7xl mx-auto space-y-6">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-gray-800/50 backdrop-blur-sm rounded-xl p-4 border border-gray-700">
+          <div className="flex items-center gap-4">
+            <div className="px-4 py-2 bg-gray-700/50 rounded-lg font-mono text-gray-300">
+              Room: {roomId}
+            </div>
+            <div className="px-4 py-2 bg-gray-700/50 rounded-lg text-gray-300">
+              Playing as{' '}
+              <span className={`font-semibold ${playerColor === 'white' ? 'text-amber-400' : 'text-blue-400'}`}>
+                {playerColor}
+              </span>
+            </div>
+          </div>
+          <button
+            onClick={handleCopyRoomId}
+            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-gray-300 rounded-lg transition-all flex items-center gap-2 text-sm"
+          >
+            {copied ? 'Copied!' : 'Copy Room Code'}
+            {copied ? <CheckIcon className="w-4 h-4" /> : <CopyIcon className="w-4 h-4" />}
+          </button>
+        </div>
+
+        <ChessGame playerColor={playerColor} roomId={roomId} />
       </div>
-      <ChessGame playerColor={playerColor} roomId={roomId} />
     </div>
   );
 };
+
+const CheckIcon = ({ className = "w-6 h-6" }) => (
+  <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+  </svg>
+);
+
+const CopyIcon = ({ className = "w-6 h-6" }) => (
+  <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+  </svg>
+);
 
 export default ChessRoom;

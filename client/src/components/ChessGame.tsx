@@ -3,7 +3,7 @@ import { Chess } from 'chess.js';
 import { Chessboard } from 'react-chessboard';
 import { Square } from '../types/types';
 import { socketService } from '../services/socket';
-import { getPieceComponent } from './chessPieces';
+import { getPieceComponent } from './ChessPieces';
 
 interface ChessGameProps {
   playerColor: 'white' | 'black' | null;
@@ -15,6 +15,9 @@ interface CapturedPiece {
   color: 'w' | 'b';
 }
 
+
+
+
 const ChessGame = ({ playerColor, roomId }: ChessGameProps) => {
   const [game, setGame] = useState(new Chess());
   const [selectedSquare, setSelectedSquare] = useState<Square | null>(null);
@@ -25,9 +28,11 @@ const ChessGame = ({ playerColor, roomId }: ChessGameProps) => {
     black: CapturedPiece[];
   }>({ white: [], black: [] });
 
-  const checkGameEnd = (currentGame: Chess) => {
+
+
+  const checkGameEnd = useCallback((currentGame: Chess) => {
     let result = null;
-    
+
     if (currentGame.isCheckmate()) {
       const winner = currentGame.turn() === 'w' ? 'Black' : 'White';
       result = { winner, type: 'checkmate' };
@@ -45,78 +50,60 @@ const ChessGame = ({ playerColor, roomId }: ChessGameProps) => {
 
     if (result) {
       setGameResult(`${result.winner} wins by ${result.type}!`);
-      socketService.emitGameOver({
-        roomId,
-        ...result
-      });
+      socketService.emitGameOver({ roomId, ...result });
     }
 
     return result;
-  };
+  }, [roomId]);
 
+
+
+  // Socket effect for game updates
   useEffect(() => {
     const socket = socketService.getSocket();
-    
+
     if (socket) {
       const handleOpponentMove = ({ move, fen, capturedPiece }) => {
-        console.log('Received opponent move:', move, 'FEN:', fen);
-        console.log('Captured piece:', capturedPiece);
-        
         const newGame = new Chess(fen);
         setGame(newGame);
         setSelectedSquare(null);
         setPossibleMoves([]);
 
+
+
         if (capturedPiece) {
-          setCapturedPieces(prev => {
-            // Determine which array to update based on the captured piece's color
-            if (capturedPiece.color === 'w') {
-              return {
-                ...prev,
-                white: [...prev.white, capturedPiece]
-              };
-            } else {
-              return {
-                ...prev,
-                black: [...prev.black, capturedPiece]
-              };
-            }
-          });
+          setCapturedPieces(prev => ({
+            ...prev,
+            [capturedPiece.color === 'w' ? 'white' : 'black']: [
+              ...prev[capturedPiece.color === 'w' ? 'white' : 'black'],
+              capturedPiece
+            ]
+          }));
         }
 
         checkGameEnd(newGame);
       };
 
-      const handleGameEnded = ({ winner, type }) => {
-        console.log('Game ended:', winner, type);
-        setGameResult(`${winner} wins by ${type}!`);
-      };
+
 
       socket.on('opponent_move', handleOpponentMove);
-      socket.on('game_ended', handleGameEnded);
+
 
       return () => {
         socket.off('opponent_move', handleOpponentMove);
-        socket.off('game_ended', handleGameEnded);
       };
     }
-  }, [roomId]);
+  }, [checkGameEnd]);
 
   const updateCapturedPieces = useCallback((capturedPiece: CapturedPiece | null) => {
     if (capturedPiece) {
-      setCapturedPieces(prev => {
-        if (capturedPiece.color === 'w') {
-          return {
-            ...prev,
-            white: [...prev.white, capturedPiece]
-          };
-        } else {
-          return {
-            ...prev,
-            black: [...prev.black, capturedPiece]
-          };
-        }
-      });
+      setCapturedPieces(prev => ({
+        ...prev,
+        [capturedPiece.color === 'w' ? 'white' : 'black']: [
+          ...prev[capturedPiece.color === 'w' ? 'white' : 'black'],
+          capturedPiece
+        ]
+      }));
     }
   }, []);
 
@@ -138,7 +125,7 @@ const ChessGame = ({ playerColor, roomId }: ChessGameProps) => {
 
       const newGame = new Chess(game.fen());
       setGame(newGame);
-      
+
       const capturedPieceData = capturedPiece ? {
         type: capturedPiece.type,
         color: capturedPiece.color
@@ -147,20 +134,16 @@ const ChessGame = ({ playerColor, roomId }: ChessGameProps) => {
       if (capturedPieceData) {
         updateCapturedPieces(capturedPieceData);
       }
-      
-      socketService.makeMove(roomId, { 
-        from: sourceSquare, 
-        to: targetSquare 
+
+      socketService.makeMove(roomId, {
+        from: sourceSquare,
+        to: targetSquare
       }, newGame.fen(), capturedPieceData);
-      
+
       setSelectedSquare(null);
       setPossibleMoves([]);
 
-      const gameEndResult = checkGameEnd(newGame);
-      if (gameEndResult) {
-        setGameResult(`${gameEndResult.winner} wins by ${gameEndResult.type}!`);
-      }
-
+      checkGameEnd(newGame);
       return true;
     } catch {
       return false;
@@ -173,7 +156,7 @@ const ChessGame = ({ playerColor, roomId }: ChessGameProps) => {
     }
 
     const pieceOnSquare = game.get(square);
-    
+
     if (!selectedSquare) {
       if (pieceOnSquare && pieceOnSquare.color === game.turn()) {
         setSelectedSquare(square);
@@ -199,7 +182,6 @@ const ChessGame = ({ playerColor, roomId }: ChessGameProps) => {
     if (gameResult || playerColor !== (game.turn() === 'w' ? 'white' : 'black')) {
       return false;
     }
-
     return makeMove(sourceSquare, targetSquare);
   };
 
@@ -216,66 +198,96 @@ const ChessGame = ({ playerColor, roomId }: ChessGameProps) => {
       styles[square] = {
         backgroundColor: 'rgba(0, 255, 0, 0.2)',
         borderRadius: '50%',
-        boxShadow: 'inset 0 0 0 2px rgba(0, 255, 0, 0.4)',
       };
     });
 
     return styles;
   };
 
-  const CapturedPiecesDisplay = ({ pieces }: { pieces: CapturedPiece[] }) => {
-    return (
-      <div className="flex flex-wrap gap-2 p-2 bg-gray-100 rounded min-h-[100px]">
-        {pieces.map((piece, index) => (
-          <div key={index} className="w-8 h-8 flex items-center justify-center bg-white rounded shadow">
-            {getPieceComponent(
-              piece.type,
-              piece.color === 'w' ? 'white' : 'black',
-              30
-            )}
-          </div>
-        ))}
-      </div>
-    );
-  };
+  const CapturedPiecesDisplay = ({ pieces }: { pieces: CapturedPiece[] }) => (
+    <div className="flex flex-wrap gap-1 h-12">
+      {pieces.map((piece, index) => (
+        <div key={index} className="w-8 h-8 flex items-center justify-center">
+          {getPieceComponent(
+            piece.type,
+            piece.color === 'w' ? 'white' : 'black',
+            28
+          )}
+        </div>
+      ))}
+    </div>
+  );
 
   return (
-    <div className="flex items-start justify-center gap-8 p-8">
-      <div className="w-32">
-        <h3 className="text-center mb-2 font-semibold">Captured White Pieces</h3>
-        <CapturedPiecesDisplay pieces={capturedPieces.white} />
-      </div>
+    <div className="h-screen flex flex-col">
+      <div className="w-full max-w-screen-lg mx-auto px-4 py-2 sm:px-2 sm:py-1">
+        {/* Game Status for Desktop (Top) */}
+        <div className="hidden sm:block text-center text-xl text-gray-300 sm:mb-4">
+          {gameResult ? (
+            <div className="font-bold text-blue-400">{gameResult}</div>
+          ) : (
+            <>
+              {game.turn() === 'w' ? "White" : "Black"} to move
+              {game.isCheck() && <span className="ml-2 text-red-400">Check!</span>}
+            </>
+          )}
+        </div>
 
-      <div className="w-[560px]">
-        <Chessboard
-          position={game.fen()}
-          onPieceDrop={onDrop}
-          onSquareClick={handleSquareClick}
-          customSquareStyles={customSquareStyles()}
-          boardOrientation={playerColor || 'white'}
-          customBoardStyle={{
-            borderRadius: '4px',
-            boxShadow: '0 2px 10px rgba(0, 0, 0, 0.5)',
-          }}
-        />
-        
-        {gameResult ? (
-          <div className="mt-4 text-xl font-bold text-center p-4 bg-blue-100 rounded">
-            {gameResult}
+        {/* Captured Pieces for Mobile (Top) */}
+        <div className="flex sm:hidden justify-between items-center mb-4">
+          <div className="text-gray-300 text-lg sm:text-sm">
+            <CapturedPiecesDisplay pieces={capturedPieces.white} />
           </div>
-        ) : (
-          <div className="mt-4 text-xl font-semibold text-center">
-            {game.turn() === 'w' ? "White" : "Black"} to move
-            {game.isCheck() && " - Check!"}
+          <div className="text-gray-300 text-lg sm:text-sm">
+            <CapturedPiecesDisplay pieces={capturedPieces.black} />
           </div>
-        )}
-      </div>
+        </div>
 
-      <div className="w-32">
-        <h3 className="text-center mb-2 font-semibold">Captured Black Pieces</h3>
-        <CapturedPiecesDisplay pieces={capturedPieces.black} />
+        {/* Main Content: Chessboard and Captured Pieces for Desktop */}
+        <div className="flex sm:space-x-4 justify-center">
+          {/* Captured Pieces for Desktop (Left) */}
+          <div className="hidden sm:flex sm:flex-col justify-center items-center w-20">
+            <div className="text-gray-300 text-lg sm:text-sm">
+              <CapturedPiecesDisplay pieces={capturedPieces.white} />
+            </div>
+          </div>
+
+          {/* Chessboard */}
+          <div className="w-full sm:w-[calc(100%-160px)] aspect-square max-h-[calc(100vh-220px)] mx-auto sm:mx-0 sm:max-w-[500px]">
+            <Chessboard
+              position={game.fen()}
+              onPieceDrop={onDrop}
+              onSquareClick={handleSquareClick}
+              customSquareStyles={customSquareStyles()}
+              boardOrientation={playerColor || 'white'}
+            />
+          </div>
+
+          {/* Captured Pieces for Desktop (Right) */}
+          <div className="hidden sm:flex sm:flex-col justify-center items-center w-20">
+            <div className="text-gray-300 text-lg sm:text-sm">
+              <CapturedPiecesDisplay pieces={capturedPieces.black} />
+            </div>
+          </div>
+        </div>
+
+        {/* Game Status for Mobile (Below Board) */}
+        <div className="block sm:hidden mt-4 text-center text-xl text-gray-300">
+          {gameResult ? (
+            <div className="font-bold text-blue-400">{gameResult}</div>
+          ) : (
+            <>
+              {game.turn() === 'w' ? "White" : "Black"} to move
+              {game.isCheck() && <span className="ml-2 text-red-400">Check!</span>}
+            </>
+          )}
+        </div>
       </div>
     </div>
+
+
+
+
   );
 };
 
