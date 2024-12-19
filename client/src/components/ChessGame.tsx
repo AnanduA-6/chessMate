@@ -63,7 +63,7 @@ const ChessGame = ({ playerColor, roomId }: ChessGameProps) => {
     const socket = socketService.getSocket();
 
     if (socket) {
-      const handleOpponentMove = ({ move, fen, capturedPiece }) => {
+      const handleOpponentMove = ({ fen, capturedPiece }: { fen: string; capturedPiece?: CapturedPiece }) => {
         const newGame = new Chess(fen);
         setGame(newGame);
         setSelectedSquare(null);

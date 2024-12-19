@@ -1,6 +1,4 @@
 // ChessPieces.tsx
-import React from 'react';
-
 interface PieceProps {
   size?: number;
   color: 'white' | 'black';
