@@ -31,7 +31,7 @@ class SocketService {
   
   connect() {
     if (!this.socket) {
-      this.socket = io('http://localhost:3001');
+      this.socket = io(process.env.VITE_BACKEND_URL as string);
       
       this.socket.on('connect', () => {
         console.log('Socket connected:', this.socket?.id);
