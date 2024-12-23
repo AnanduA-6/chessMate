@@ -31,9 +31,13 @@ class SocketService {
 
   connect() {
     if (!this.socket) {
-      console.log('Attempting to connect to:', import.meta.env.VITE_BACKEND_URL); // Changed from process.env
+      console.log('Attempting to connect to:', import.meta.env.VITE_BACKEND_URL);
 
-      this.socket = io(import.meta.env.VITE_BACKEND_URL); // Changed from process.env
+      this.socket = io(import.meta.env.VITE_BACKEND_URL, {
+        rejectUnauthorized: false, // Allow self-signed certificates
+        secure: true,
+        transports: ['websocket', 'polling']
+      });
 
       this.socket.on('connect', () => {
         console.log('Socket connected:', this.socket?.id);
