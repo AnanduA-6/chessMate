@@ -31,7 +31,7 @@ class SocketService {
   
   connect(): Socket {
     if (!this.socket) {
-      const backendUrl = process.env.VITE_BACKEND_URL?.replace(/\/$/, ''); // Remove trailing slash
+      const backendUrl = process.env.VITE_BACKEND_URL; // Remove trailing slash
       if (!backendUrl) {
         throw new Error('Backend URL not configured');
       }
