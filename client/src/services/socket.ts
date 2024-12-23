@@ -31,9 +31,13 @@ class SocketService {
   
   connect(): Socket {
     if (!this.socket) {
-      const backendUrl = process.env.VITE_BACKEND_URL; // Remove trailing slash
+      const backendUrl = process.env.VITE_BACKEND_URL;
+      console.log('Attempting to connect with URL:', backendUrl); // Debug log
+
       if (!backendUrl) {
-        throw new Error('Backend URL not configured');
+        // Provide more helpful error message
+        console.error('Environment variables available:', process.env);
+        throw new Error('VITE_BACKEND_URL is not configured. Please check your Vercel environment variables.');
       }
 
       this.socket = io(backendUrl, {
