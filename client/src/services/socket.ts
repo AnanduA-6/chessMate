@@ -31,12 +31,9 @@ class SocketService {
 
   connect() {
     if (!this.socket) {
-      // Simple configuration that adds reliability without complexity
-      this.socket = io(process.env.VITE_BACKEND_URL as string, {
-        transports: ['websocket', 'polling'],
-        reconnection: true,
-        timeout: 10000
-      });
+      console.log('Attempting to connect to:', process.env.VITE_BACKEND_URL); // Debug log
+
+      this.socket = io(process.env.VITE_BACKEND_URL as string);
 
       this.socket.on('connect', () => {
         console.log('Socket connected:', this.socket?.id);
