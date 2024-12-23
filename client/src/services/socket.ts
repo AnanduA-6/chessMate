@@ -20,7 +20,7 @@ class SocketService {
   private static instance: SocketService;
   private socket: Socket | null = null;
 
-  private constructor() {}
+  private constructor() { }
 
   static getInstance(): SocketService {
     if (!SocketService.instance) {
@@ -28,27 +28,14 @@ class SocketService {
     }
     return SocketService.instance;
   }
-  
-  connect(): Socket {
+
+  connect() {
     if (!this.socket) {
-      const backendUrl = process.env.VITE_BACKEND_URL;
-      console.log('Attempting to connect with URL:', backendUrl); // Debug log
-
-      if (!backendUrl) {
-        // Provide more helpful error message
-        console.error('Environment variables available:', process.env);
-        throw new Error('VITE_BACKEND_URL is not configured. Please check your Vercel environment variables.');
-      }
-
-      this.socket = io(backendUrl, {
+      // Simple configuration that adds reliability without complexity
+      this.socket = io(process.env.VITE_BACKEND_URL as string, {
         transports: ['websocket', 'polling'],
-        withCredentials: true,
         reconnection: true,
-        reconnectionAttempts: 5,
-        reconnectionDelay: 1000,
-        timeout: 10000,
-        secure: true,
-        rejectUnauthorized: false // Important for mixed HTTP/HTTPS connections
+        timeout: 10000
       });
 
       this.socket.on('connect', () => {
@@ -64,7 +51,7 @@ class SocketService {
       });
     }
     return this.socket;
-}
+  }
 
   createRoom() {
     if (this.socket) {
