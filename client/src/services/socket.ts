@@ -31,9 +31,9 @@ class SocketService {
 
   connect() {
     if (!this.socket) {
-      console.log('Attempting to connect to:', process.env.VITE_BACKEND_URL); // Debug log
+      console.log('Attempting to connect to:', import.meta.env.VITE_BACKEND_URL); // Changed from process.env
 
-      this.socket = io(process.env.VITE_BACKEND_URL as string);
+      this.socket = io(import.meta.env.VITE_BACKEND_URL); // Changed from process.env
 
       this.socket.on('connect', () => {
         console.log('Socket connected:', this.socket?.id);
