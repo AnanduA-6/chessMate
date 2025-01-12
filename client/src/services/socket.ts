@@ -32,19 +32,23 @@ class SocketService {
   connect() {
     if (!this.socket) {
       console.log('Attempting to connect to:', import.meta.env.VITE_BACKEND_URL);
-
+      
       this.socket = io(import.meta.env.VITE_BACKEND_URL, {
-        rejectUnauthorized: false, // Allow self-signed certificates
-        secure: true,
-        transports: ['websocket', 'polling']
+        transports: ['polling'], // Force polling only
+        secure: false,
+        rejectUnauthorized: false,
+        path: '/socket.io/',
+        reconnectionAttempts: 5,
+        reconnectionDelay: 1000,
+        timeout: 10000
       });
-
+      
       this.socket.on('connect', () => {
         console.log('Socket connected:', this.socket?.id);
       });
 
       this.socket.on('connect_error', (error) => {
-        console.error('Socket connection error:', error);
+        console.error('Socket connection error details:', error);
       });
 
       this.socket.on('disconnect', (reason) => {
@@ -52,7 +56,7 @@ class SocketService {
       });
     }
     return this.socket;
-  }
+}
 
   createRoom() {
     if (this.socket) {
